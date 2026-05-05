@@ -14,7 +14,10 @@ class DoveTheme {
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: DoveColors.black,
-      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      // This line is the "Check": It uses the package, not a local asset path
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData.dark().textTheme,
+      ),
       colorScheme: const ColorScheme.dark(
         primary: DoveColors.white,
         secondary: DoveColors.cyan,
