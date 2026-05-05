@@ -1,69 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base href="$FLUTTER_BASE_HREF">
-
+  <base href="/empty-wallet-app2/">
   <meta charset="UTF-8">
-  <meta name="description" content="Dove Music - Stream, share and connect through music">
+  <meta name="description" content="Dove Music - Stream and connect">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Dove Music</title>
-
   <style>
-    body {
-      margin: 0;
-      background-color: #000000;
-      color: #FFFFFF;
-      font-family: Arial, sans-serif;
-      overflow: hidden;
-    }
-
-    #loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      text-align: center;
-    }
-
-    #logo {
-      font-size: 48px;
-      letter-spacing: 10px;
-      margin-bottom: 20px;
-    }
-
-    #spinner {
-      width: 30px;
-      height: 30px;
-      border: 3px solid #1A1A1A;
-      border-top: 3px solid #25F4EE;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    body { margin: 0; background-color: #000000; color: #FFFFFF; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; }
+    #loader { text-align: center; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #1A1A1A; border-top: 4px solid #25F4EE; border-radius: 50%; animation: spin 1s linear infinite; margin: 10px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
-
 <body>
-  <div id="loading">
-    <div id="logo">DOVE</div>
-    <div id="spinner"></div>
+  <div id="loader">
+    <div style="font-size: 24px; letter-spacing: 5px; font-weight: bold;">DOVE</div>
+    <div class="spinner"></div>
   </div>
-
   <script src="flutter_bootstrap.js" async></script>
-
-  <script>
-    window.addEventListener('flutter-first-frame', function () {
-      var loader = document.getElementById('loading');
-      if (loader) {
-        loader.style.display = 'none';
-      }
-    });
-  </script>
 </body>
 </html>
