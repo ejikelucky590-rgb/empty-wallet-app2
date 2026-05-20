@@ -1,65 +1,70 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'theme/dove_theme.dart';
-import 'screens/hub/hub_screen.dart';
 
-Future<void> main() async {
+import 'theme/dove_theme.dart';
+import 'core/router.dart';
+
+Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Your actual Supabase Project configuration
-  await Supabase.initialize(
-    url: 'https://bpxqlhfntpdqnlddrlpc.supabase.co',
-    anonKey: 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5',
-  );
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+  }
 
-  runApp(const DoveApp());
+  // Pure environment-driven initialization
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: No .env configuration runtime file discovered.");
+  }
+
+  final String supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
+  final String supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
+
+  if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
+    debugPrint("Critical Error: Missing environment variables configuration keys.");
+  }
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    return true;
+  };
+
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseKey,
+  );
+}
+
+Future<void> main() async {
+  await bootstrap();
+
+  runZonedGuarded(() {
+    runApp(const DoveApp());
+  }, (error, stack) {
+    debugPrint("Zoned boundary caught error safely.");
+  });
 }
 
 class DoveApp extends StatelessWidget {
   const DoveApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
+      title: 'Dove Music',
       theme: DoveTheme.darkTheme,
-      home: const MainNavigation(),
-    );
-  }
-}
-
-class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
-  @override
-  State<MainNavigation> createState() => _MainNavigationState();
-}
-
-class _MainNavigationState extends State<MainNavigation> {
-  int _selectedIndex = 0;
-
-  final List<Widget> _screens = [
-    const HubScreen(),
-    const Center(child: Text("🎵 Waive Music", style: TextStyle(fontSize: 20))),
-    const Center(child: Text("➕ Upload Content", style: TextStyle(fontSize: 20))),
-    const Center(child: Text("🏆 Top 10 Ranking", style: TextStyle(fontSize: 20))),
-    const Center(child: Text("👤 My Profile", style: TextStyle(fontSize: 20))),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: _screens),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Hub'),
-          BottomNavigationBarItem(icon: Icon(Icons.music_note), label: 'Waive'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_box_outlined, size: 30), label: 'Plus'),
-          BottomNavigationBarItem(icon: Icon(Icons.leaderboard), label: 'Ranking'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Me'),
-        ],
-      ),
+      routerConfig: router,
     );
   }
 }

@@ -7,11 +7,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+
+      # Dynamically injects the hidden .env file during build execution safely
+      - name: Create Env File
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+
       - run: flutter pub get
       - run: flutter build web --release --base-href "/empty-wallet-app2/" --no-wasm-dry-run
+
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
