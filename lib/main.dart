@@ -8,50 +8,62 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/dove_theme.dart';
 import 'core/router.dart';
 
+// Global string to catch initialization crashes
+String? bootstrapError;
+
 Future<void> bootstrap() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  if (!kIsWeb) {
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-  }
-
-  // Load configuration with safe silent try-catch block
   try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Notice: Local .env file not found. Reading system variables.");
-  }
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Pure bulletproof fallback strategy using standard .getOrElse()
-  final String supabaseUrl = dotenv.get('SUPABASE_URL', fallback: 'https://bpxqlhfntpdqnlddrlpc.supabase.co');
-  final String supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5');
+    if (!kIsWeb) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+      ]);
+    }
 
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.presentError(details);
-  };
+    try {
+      await dotenv.load(fileName: ".env");
+    } catch (e) {
+      debugPrint("Notice: Local .env file missing.");
+    }
 
-  PlatformDispatcher.instance.onError = (error, stack) {
-    return true;
-  };
+    final String supabaseUrl = dotenv.get('SUPABASE_URL', fallback: 'https://bpxqlhfntpdqnlddrlpc.supabase.co');
+    final String supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5');
 
-  try {
-    // Rigid 4-second initialization timeout container safeguard
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseKey,
-    ).timeout(const Duration(seconds: 4), onTimeout: () {
-      debugPrint("Supabase engine timed out. Continuing launch flow.");
-      return Supabase.instance;
-    });
-  } catch (e) {
-    debugPrint("Supabase initialization bypassed safely: $e");
+    ).timeout(const Duration(seconds: 4));
+    
+  } catch (e, stack) {
+    // Capture the exact crash reason to display on the screen
+    bootstrapError = "Bootstrap Crash: $e\n\nStacktrace: $stack";
   }
 }
 
 Future<void> main() async {
   await bootstrap();
+
+  // If a bootstrap error happened, we completely bypass the router and show the error text
+  if (bootstrapError != null) {
+    runApp(MaterialApp(
+      home: Scaffold(
+        backgroundColor: Colors.black,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Text(
+                bootstrapError!,
+                style: const TextStyle(color: Colors.red, fontFamily: 'monospace', fontSize: 14),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ));
+    return;
+  }
 
   runZonedGuarded(() {
     runApp(const DoveApp());
