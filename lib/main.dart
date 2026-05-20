@@ -17,7 +17,6 @@ Future<void> bootstrap() async {
     ]);
   }
 
-  // Pure environment-driven initialization
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
@@ -27,10 +26,6 @@ Future<void> bootstrap() async {
   final String supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
   final String supabaseKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
 
-  if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
-    debugPrint("Critical Error: Missing environment variables configuration keys.");
-  }
-
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -39,10 +34,22 @@ Future<void> bootstrap() async {
     return true;
   };
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseKey,
-  );
+  if (supabaseUrl.isNotEmpty && supabaseKey.isNotEmpty) {
+    // Timeout safeguard protects the web canvas if the backend is sleeping or paused
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseKey,
+      ).timeout(const Duration(seconds: 4), onTimeout: () {
+        throw TimeoutException("Supabase initialization timed out. Server might be paused.");
+      });
+      debugPrint("Supabase initialized successfully.");
+    } catch (e) {
+      debugPrint("Supabase Boot Error: $e. Proceeding to render UI container safely.");
+    }
+  } else {
+    debugPrint("Critical Error: Missing environmental keys configuration.");
+  }
 }
 
 Future<void> main() async {
@@ -51,7 +58,7 @@ Future<void> main() async {
   runZonedGuarded(() {
     runApp(const DoveApp());
   }, (error, stack) {
-    debugPrint("Zoned boundary caught error safely.");
+    debugPrint("Zoned boundary caught error safely: $error");
   });
 }
 
