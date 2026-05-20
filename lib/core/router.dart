@@ -7,17 +7,16 @@ final GoRouter router = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) {
-        return const MainNavigation();
-      },
+      builder: (context, state) => const MainNavigation(),
     ),
   ],
   errorBuilder: (context, state) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Center(
         child: Text(
           state.error.toString(),
-          style: const TextStyle(color: Colors.red),
+          style: const TextStyle(color: Colors.red, fontSize: 16),
         ),
       ),
     );

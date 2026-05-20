@@ -16,24 +16,21 @@ class _MainNavigationState extends State<MainNavigation>
     with WidgetsBindingObserver {
 
   int _selectedIndex = 0;
+  
+  // Make this a dynamic runtime list instead of const
   late final List<Widget> _screens;
-
-  @override
-  void nichesInit() {
-    // Keep internal initialization safe
-  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _screens = const [
-      HubScreen(),
-      Center(child: Text("🎵 Waive Music", style: TextStyle(fontSize: 20))),
-      Center(child: Text("➕ Upload Content", style: TextStyle(fontSize: 20))),
-      Center(child: Text("🏆 Top Rankings", style: TextStyle(fontSize: 20))),
-      ProfileScreen(),
+    _screens = [
+      const HubScreen(),
+      const Center(child: Text("🎵 Waive Music", style: TextStyle(fontSize: 20, color: Colors.white))),
+      const Center(child: Text("➕ Upload Content", style: TextStyle(fontSize: 20, color: Colors.white))),
+      const Center(child: Text("🏆 Top Rankings", style: TextStyle(fontSize: 20, color: Colors.white))),
+      const ProfileScreen(),
     ];
 
     _listenToAuthChanges();
