@@ -17,16 +17,16 @@ Future<void> bootstrap() async {
     ]);
   }
 
-  // Load configuration with silent fallback
+  // Load configuration with safe silent try-catch block
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("Notice: Standard local .env container not found. Checking runtime bindings.");
+    debugPrint("Notice: Local .env file not found. Reading system variables.");
   }
 
-  // Ensure variables never evaluate to a critical null point on the web layer
-  final String supabaseUrl = dotenv.maybeEnv['SUPABASE_URL'] ?? 'https://bpxqlhfntpdqnlddrlpc.supabase.co';
-  final String supabaseKey = dotenv.maybeEnv['SUPABASE_ANON_KEY'] ?? 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5';
+  // Pure bulletproof fallback strategy using standard .getOrElse()
+  final String supabaseUrl = dotenv.get('SUPABASE_URL', fallback: 'https://bpxqlhfntpdqnlddrlpc.supabase.co');
+  final String supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5');
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
@@ -37,17 +37,16 @@ Future<void> bootstrap() async {
   };
 
   try {
-    // 4-second maximum safety barrier to completely guarantee the UI mounts
+    // Rigid 4-second initialization timeout container safeguard
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseKey,
     ).timeout(const Duration(seconds: 4), onTimeout: () {
-      debugPrint("Supabase initialization exceeded timeout limit. Launching UI core standalone.");
+      debugPrint("Supabase engine timed out. Continuing launch flow.");
       return Supabase.instance;
     });
-    debugPrint("Supabase engine status linked cleanly.");
   } catch (e) {
-    debugPrint("Supabase bypass active: $e");
+    debugPrint("Supabase initialization bypassed safely: $e");
   }
 }
 
@@ -57,7 +56,7 @@ Future<void> main() async {
   runZonedGuarded(() {
     runApp(const DoveApp());
   }, (error, stack) {
-    debugPrint("Safely caught boundary state change: $error");
+    debugPrint("Zoned boundary caught error: $error");
   });
 }
 
