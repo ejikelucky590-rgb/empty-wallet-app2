@@ -8,43 +8,43 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/dove_theme.dart';
 import 'core/router.dart';
 
-// Global string to catch initialization crashes
 String? bootstrapError;
 
 Future<void> bootstrap() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb) {
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
+  }
+
+  String supabaseUrl = 'https://bpxqlhfntpdqnlddrlpc.supabase.co';
+  String supabaseKey = 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5';
+
+  // Safe isolated try-catch specifically for the dotenv parsing layer
   try {
-    WidgetsFlutterBinding.ensureInitialized();
+    await dotenv.load(fileName: ".env");
+    supabaseUrl = dotenv.get('SUPABASE_URL', fallback: supabaseUrl);
+    supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: supabaseKey);
+  } catch (e) {
+    debugPrint("Bypassing missing asset file bundle: $e");
+  }
 
-    if (!kIsWeb) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.portraitUp,
-      ]);
-    }
-
-    try {
-      await dotenv.load(fileName: ".env");
-    } catch (e) {
-      debugPrint("Notice: Local .env file missing.");
-    }
-
-    final String supabaseUrl = dotenv.get('SUPABASE_URL', fallback: 'https://bpxqlhfntpdqnlddrlpc.supabase.co');
-    final String supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5');
-
+  try {
     await Supabase.initialize(
       url: supabaseUrl,
       anonKey: supabaseKey,
     ).timeout(const Duration(seconds: 4));
-    
   } catch (e, stack) {
-    // Capture the exact crash reason to display on the screen
-    bootstrapError = "Bootstrap Crash: $e\n\nStacktrace: $stack";
+    // Only flag critical infrastructure connection failures
+    bootstrapError = "Database Engine Error: $e\n\nStacktrace: $stack";
   }
 }
 
 Future<void> main() async {
   await bootstrap();
 
-  // If a bootstrap error happened, we completely bypass the router and show the error text
   if (bootstrapError != null) {
     runApp(MaterialApp(
       home: Scaffold(
@@ -68,7 +68,7 @@ Future<void> main() async {
   runZonedGuarded(() {
     runApp(const DoveApp());
   }, (error, stack) {
-    debugPrint("Zoned boundary caught error: $error");
+    debugPrint("Zoned caught exception: $error");
   });
 }
 
