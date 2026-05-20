@@ -11,7 +11,7 @@ jobs:
         with:
           channel: 'stable'
       - run: flutter pub get
-      - run: flutter build web --release --base-href "/empty-wallet-app2/" --web-renderer html --no-wasm-dry-run
+      - run: flutter build web --release --base-href "/empty-wallet-app2/" --no-wasm-dry-run
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
         with:
