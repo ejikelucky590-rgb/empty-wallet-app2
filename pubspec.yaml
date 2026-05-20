@@ -24,6 +24,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # Explicitly declares the asset framework to prevent runtime crashes
-  assets:
-    - .env
