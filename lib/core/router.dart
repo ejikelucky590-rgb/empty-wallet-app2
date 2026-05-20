@@ -4,6 +4,13 @@ import '../screens/main_navigation.dart';
 
 final GoRouter router = GoRouter(
   initialLocation: '/',
+  // This completely fixes the GitHub Pages subdirectory routing blackout
+  redirect: (context, state) {
+    if (state.uri.path.contains('empty-wallet-app2')) {
+      return '/';
+    }
+    return null;
+  },
   routes: [
     GoRoute(
       path: '/',
@@ -15,7 +22,7 @@ final GoRouter router = GoRouter(
       backgroundColor: Colors.black,
       body: Center(
         child: Text(
-          state.error.toString(),
+          "Router Redirect Error: ${state.error}",
           style: const TextStyle(color: Colors.red, fontSize: 16),
         ),
       ),
