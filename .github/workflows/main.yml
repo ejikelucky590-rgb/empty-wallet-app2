@@ -12,6 +12,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # Global environment mapping for the entire build pipeline
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -26,11 +31,9 @@ jobs:
 
       - name: Build Flutter Web
         run: |
-          flutter build web \
-            --release \
-            --base-href "/empty-wallet-app2/" \
-            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
-            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          flutter build web --release --base-href "/empty-wallet-app2/" \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
