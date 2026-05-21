@@ -2,28 +2,37 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
 
-      - uses: subosito/flutter-action@v2
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: stable
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Build Web Application
+      - name: Build Flutter Web
         run: |
-          flutter build web --release --base-href "/empty-wallet-app2/" --no-wasm-dry-run \
-          --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
-          --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
+          flutter build web \
+            --release \
+            --base-href "/empty-wallet-app2/" \
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
 
-      - name: Deploy
+      - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
