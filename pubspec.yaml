@@ -1,32 +1,28 @@
 name: empty_wallet_app2
-description: "A new Flutter project."
+description: "A professional cross-platform hub for Dove Music 🕊️"
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.0
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  cupertino_icons: ^1.0.8
-  just_audio: ^0.9.36
-  cached_network_image: ^3.4.1
-  shimmer: ^3.0.0
-  go_router: ^14.2.0
-  supabase_flutter: ^2.8.3
-  flutter_dotenv: ^5.2.1
+  cupertino_icons: ^1.0.6
+  supabase_flutter: ^2.6.0
+  go_router: ^13.2.0
+  flutter_secure_storage: ^9.0.0
+  universal_html: ^2.2.4
+  cached_network_image: ^3.3.1
+  flutter_animate: ^4.5.0
+  just_audio: ^0.9.38
+  audio_session: ^0.1.18
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
-
-  # Cross-platform production dependencies
-  just_audio: ^0.9.38
-  audio_session: ^0.1.18
-  cached_network_image: ^3.3.1
-  flutter_animate: ^4.5.0
