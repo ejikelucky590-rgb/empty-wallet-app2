@@ -29,7 +29,12 @@ Future<void> bootstrap() async {
   );
 
   if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
-    bootstrapError = "Configuration Error: Missing Supabase environment compilation flags.";
+    // DIAGNOSTICS UPDATE: Show exactly which variable is failing to load
+    bootstrapError = "Configuration Error: Missing Supabase environment compilation flags.\n\n"
+                     "🔍 DIAGNOSTICS:\n"
+                     "-> SUPABASE_URL detected: ${supabaseUrl.isNotEmpty ? 'YES (Length: ${supabaseUrl.length})' : 'NO (EMPTY)'}\n"
+                     "-> SUPABASE_ANON_KEY detected: ${supabaseKey.isNotEmpty ? 'YES (Length: ${supabaseKey.length})' : 'NO (EMPTY)'}\n\n"
+                     "Please check your GitHub Repository Secrets spelling and deployment environment configuration.";
     return;
   }
 
@@ -48,15 +53,21 @@ Future<void> main() async {
 
   if (bootstrapError != null) {
     runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: Colors.black,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(24.0),
             child: SingleChildScrollView(
               child: Text(
                 bootstrapError!,
-                style: const TextStyle(color: Colors.red, fontFamily: 'monospace', fontSize: 14),
+                style: const TextStyle(
+                  color: Colors.redAccent, 
+                  fontFamily: 'monospace', 
+                  fontSize: 14,
+                  height: 1.5,
+                ),
               ),
             ),
           ),
