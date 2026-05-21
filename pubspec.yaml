@@ -16,6 +16,7 @@ dependencies:
   universal_html: ^2.2.4
   cached_network_image: ^3.3.1
   flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
   just_audio: ^0.9.38
   audio_session: ^0.1.18
 
