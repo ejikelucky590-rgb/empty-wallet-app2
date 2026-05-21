@@ -1,7 +1,9 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
     branches: [ main ]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,11 +14,14 @@ jobs:
         with:
           channel: 'stable'
 
-       Tar: flutter pub get
+      - name: Install Dependencies
+        run: flutter pub get
 
-      # Fixed: Injecting secrets cleanly as native environment variables during compiler phase
       - name: Build Web Application
-        run: flutter build web --release --base-href "/empty-wallet-app2/" --no-wasm-dry-run --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          flutter build web --release --base-href "/empty-wallet-app2/" --no-wasm-dry-run \
+          --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+          --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}"
 
       - name: Deploy
         uses: peaceiris/actions-gh-pages@v3
