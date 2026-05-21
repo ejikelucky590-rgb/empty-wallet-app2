@@ -1,7 +1,51 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ProfileHeader extends StatelessWidget {
+class ProfileHeader extends StatefulWidget {
   const ProfileHeader({super.key});
+
+  @override
+  State<ProfileHeader> createState() => _ProfileHeaderState();
+}
+
+class _ProfileHeaderState extends State<ProfileHeader> {
+  final _supabase = Supabase.instance.client;
+  String _fullName = 'Loading...';
+  String _username = 'username';
+  String _bio = 'Welcome to my studio workspace.';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserProfile();
+  }
+
+  Future<void> _fetchUserProfile() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      final data = await _supabase
+          .from('profiles')
+          .select('username, full_name, bio')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (data != null && mounted) {
+        setState(() {
+          _fullName = data['full_name'] ?? 'No Name';
+          _username = data['username'] ?? 'username';
+          _bio = data['bio'] ?? 'No bio added yet.';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -10,7 +54,6 @@ class ProfileHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
-        // Fixed: Swapped out 'center:' for the valid 'crossAxisAlignment:' parameter
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const CircleAvatar(
@@ -19,23 +62,29 @@ class ProfileHeader extends StatelessWidget {
             child: Icon(Icons.person, size: 50, color: Colors.white),
           ),
           const SizedBox(height: 16),
-          Text(
-            'Artist Name',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+          _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.purple),
+                )
+              : Text(
+                  _fullName,
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
           const SizedBox(height: 8),
-          const Text(
-            '@username',
-            style: TextStyle(color: Colors.purple, fontSize: 16),
+          Text(
+            '@$_username',
+            style: const TextStyle(color: Colors.purple, fontSize: 16),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Welcome to my studio workspace.',
+          Text(
+            _bio,
             textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
+            style: const TextStyle(color: Colors.grey),
           ),
         ],
       ),
