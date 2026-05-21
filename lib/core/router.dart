@@ -6,24 +6,21 @@ import '../screens/auth_screen.dart';
 import '../screens/onboarding_screen.dart';
 
 final GoRouter router = GoRouter(
-  initialLocation: '/',
-  redirect: (context, state) async {
+  // Optimization: Instantly look up session to decide initial path
+  initialLocation: Supabase.instance.client.auth.currentSession == null ? '/auth' : '/',
+  
+  redirect: (context, state) {
     final client = Supabase.instance.client;
     final session = client.auth.currentSession;
     final currentPath = state.uri.path;
 
-    // 1. If not logged in, force them to the auth portal
+    // 1. If not logged in and not on auth, push directly to auth
     if (session == null && currentPath != '/auth') {
       return '/auth';
     }
 
-    // 2. If logged in but trying to visit auth, return to root hub
+    // 2. If logged in but lingering on auth, push to home hub
     if (session != null && currentPath == '/auth') {
-      return '/';
-    }
-
-    // 3. GitHub Pages path fallback correction
-    if (currentPath.contains('empty-wallet-app2')) {
       return '/';
     }
 
@@ -43,15 +40,13 @@ final GoRouter router = GoRouter(
       builder: (context, state) => const OnboardingScreen(),
     ),
   ],
-  errorBuilder: (context, state) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Text(
-          "Router Error: ${state.error}",
-          style: const TextStyle(color: Colors.red, fontSize: 16),
-        ),
+  errorBuilder: (context, state) => Scaffold(
+    backgroundColor: Colors.black,
+    body: Center(
+      child: Text(
+        "Router Error: ${state.error}",
+        style: const TextStyle(color: Colors.red, fontSize: 16),
       ),
-    );
-  },
+    ),
+  ),
 );

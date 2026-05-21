@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'theme/dove_theme.dart';
@@ -19,16 +18,19 @@ Future<void> bootstrap() async {
     ]);
   }
 
-  String supabaseUrl = 'https://bpxqlhfntpdqnlddrlpc.supabase.co';
-  String supabaseKey = 'sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5';
+  // Fetch credentials securely from the compilation environment flags
+  const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+  const String supabaseKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
 
-  // Safe isolated try-catch specifically for the dotenv parsing layer
-  try {
-    await dotenv.load(fileName: ".env");
-    supabaseUrl = dotenv.get('SUPABASE_URL', fallback: supabaseUrl);
-    supabaseKey = dotenv.get('SUPABASE_ANON_KEY', fallback: supabaseKey);
-  } catch (e) {
-    debugPrint("Bypassing missing asset file bundle: $e");
+  if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
+    bootstrapError = "Configuration Error: Missing Supabase environment compilation flags.";
+    return;
   }
 
   try {
@@ -37,7 +39,6 @@ Future<void> bootstrap() async {
       anonKey: supabaseKey,
     ).timeout(const Duration(seconds: 4));
   } catch (e, stack) {
-    // Only flag critical infrastructure connection failures
     bootstrapError = "Database Engine Error: $e\n\nStacktrace: $stack";
   }
 }

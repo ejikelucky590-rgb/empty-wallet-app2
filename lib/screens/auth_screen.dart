@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/auth/auth_input_field.dart';
+import '../widgets/auth/auth_forms.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -15,66 +15,230 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _supabase = Supabase.instance.client;
+  final _secureStorage = const FlutterSecureStorage();
   final _formKey = GlobalKey<FormState>();
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _otpController = TextEditingController();
 
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
   final _usernameFocus = FocusNode();
+  final _otpFocus = FocusNode();
 
   bool _isSignUp = false;
   bool _isLoading = false;
-  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
+  bool _awaitingOtpVerification = false;
+  bool _checkingUsername = false;
+  String? _usernameError;
+  Timer? _debounce;
+  Timer? _resendCooldownTimer;
+  int _resendCooldown = 0;
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
-    _authSubscription = _supabase.auth.onAuthStateChange.listen((data) {
-      if (data.session != null && mounted) context.go('/');
+    _usernameController.addListener(_onUsernameChanged);
+    _listenToAuthChanges();
+  }
+
+  void _listenToAuthChanges() {
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((data) async {
+      final session = data.session;
+      if (session == null || !mounted) return;
+
+      final profile = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      if (profile == null) {
+        context.go('/onboarding');
+      } else {
+        context.go('/');
+      }
     });
   }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _debounce?.cancel();
+    _resendCooldownTimer?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     _usernameController.dispose();
+    _otpController.dispose();
     _emailFocus.dispose();
     _passwordFocus.dispose();
     _usernameFocus.dispose();
+    _otpFocus.dispose();
     super.dispose();
   }
 
+  void _onUsernameChanged() {
+    if (!_isSignUp) return;
+    final username = _usernameController.text.trim().toLowerCase();
+    if (username.length < 3) return;
+
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _checkUsernameAvailability(username);
+    });
+  }
+
+  Future<void> _checkUsernameAvailability(String username) async {
+    setState(() {
+      _checkingUsername = true;
+      _usernameError = null;
+    });
+
+    try {
+      final existingUser = await _supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', username)
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      setState(() {
+        if (existingUser != null) {
+          _usernameError = 'Username already taken';
+        } else {
+          _usernameError = null;
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _usernameError = 'Unable to verify username');
+    } finally {
+      if (mounted) setState(() => _checkingUsername = false);
+    }
+  }
+
   Future<void> _handleSubmit() async {
-    if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
+    if (!_isSignUp && !_formKey.currentState!.validate()) return;
+    if (_isSignUp && _usernameError != null) {
+      _showErrorSnackBar(_usernameError!);
+      return;
+    }
+
     setState(() => _isLoading = true);
-    HapticFeedback.lightImpact();
+    HapticFeedback.mediumImpact();
+
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
 
     try {
       if (_isSignUp) {
         await _supabase.auth.signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          data: {'username': _usernameController.text.trim(), 'full_name': _usernameController.text.trim()},
+          email: email,
+          password: password,
+          data: {
+            'username': _usernameController.text.trim().toLowerCase(),
+            'full_name': _usernameController.text.trim(),
+          },
         );
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification link sent to email.')));
-        setState(() => _isSignUp = false);
+        setState(() => _awaitingOtpVerification = true);
+        _startResendCooldown();
+        _showSuccessSnackBar('Verification code sent to email.');
       } else {
-        await _supabase.auth.signInWithPassword(email: _emailController.text.trim(), password: _passwordController.text);
+        final response = await _supabase.auth.signInWithPassword(email: email, password: password);
+        await _secureStorage.write(key: 'last_email', value: email);
+        if (!mounted) return;
+        if (response.session == null) {
+          _showErrorSnackBar('Unable to create session.');
+        }
       }
     } on AuthException catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: Colors.red));
+      if (mounted) _showErrorSnackBar(e.message);
+    } on TimeoutException {
+      if (mounted) _showErrorSnackBar('Network timeout.');
+    } catch (_) {
+      if (mounted) _showErrorSnackBar('Authentication failed.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _verifyOtp() async {
+    FocusScope.of(context).unfocus();
+    if (_otpController.text.trim().length < 6) {
+      _showErrorSnackBar('Invalid verification code.');
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    HapticFeedback.selectionClick();
+
+    try {
+      await _supabase.auth.verifyOTP(
+        email: _emailController.text.trim(),
+        token: _otpController.text.trim(),
+        type: OtpType.signup,
+      );
+    } on AuthException catch (e) {
+      if (mounted) _showErrorSnackBar(e.message);
+    } catch (_) {
+      if (mounted) _showErrorSnackBar('OTP verification failed.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _resendOtp() async {
+    if (_resendCooldown > 0) return;
+    try {
+      await _supabase.auth.resend(
+        type: OtpType.signup,
+        email: _emailController.text.trim(),
+      );
+      _startResendCooldown();
+      _showSuccessSnackBar('Verification code resent.');
+    } catch (_) {
+      _showErrorSnackBar('Unable to resend code.');
+    }
+  }
+
+  void _startResendCooldown() {
+    _resendCooldown = 30;
+    _resendCooldownTimer?.cancel();
+    _resendCooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_resendCooldown <= 0) {
+        timer.cancel();
+      } else {
+        if (mounted) setState(() => _resendCooldown--);
+      }
+    });
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.error,
+        content: Text(message),
+      ));
+  }
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        content: Text(message),
+      ));
   }
 
   @override
@@ -82,82 +246,75 @@ class _AuthScreenState extends State<AuthScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Icon(Icons.music_note_rounded, size: 88, color: theme.colorScheme.primary),
-                    const SizedBox(height: 32),
-                    Text(_isSignUp ? 'Create Account' : 'Welcome Back', textAlign: TextAlign.center, style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 48),
-                    if (_isSignUp) ...[
-                      AuthInputField(
-                        controller: _usernameController,
-                        focusNode: _usernameFocus,
-                        textInputAction: TextInputAction.next,
-                        keyboardType: TextInputType.name,
-                        autofillHints: const [AutofillHints.username],
-                        label: 'Username',
-                        icon: Icons.person_outline,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-                        onFieldSubmitted: (_) => _emailFocus.requestFocus(),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                    AuthInputField(
-                      controller: _emailController,
-                      focusNode: _emailFocus,
-                      textInputAction: TextInputAction.next,
-                      keyboardType: TextInputType.emailAddress,
-                      autofillHints: const [AutofillHints.email],
-                      label: 'Email Address',
-                      icon: Icons.email_outlined,
-                      validator: (v) => v == null || !v.contains('@') ? 'Invalid email' : null,
-                      onFieldSubmitted: (_) => _passwordFocus.requestFocus(),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 430),
+                  child: AutofillGroup(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Hero(
+                          tag: 'dove-auth',
+                          child: Icon(Icons.music_note_rounded, size: 90, color: theme.colorScheme.primary),
+                        ),
+                        const SizedBox(height: 32),
+                        // Added clean app branding here
+                        Text(
+                          _awaitingOtpVerification ? 'Verify Account' : (_isSignUp ? 'Join Dove Music 🕊️' : 'Welcome to Dove Music 🕊️'),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          _awaitingOtpVerification ? 'Enter the verification code sent to your email.' : 'Access your professional studio hub.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 48),
+                        _awaitingOtpVerification
+                            ? OtpFormView(
+                                controller: _otpController,
+                                focusNode: _otpFocus,
+                                isLoading: _isLoading,
+                                resendCooldown: _resendCooldown,
+                                onVerify: _verifyOtp,
+                                onResend: _resendOtp,
+                              )
+                            : CredentialFormView(
+                                formKey: _formKey,
+                                isSignUp: _isSignUp,
+                                isLoading: _isLoading,
+                                obscurePassword: _obscurePassword,
+                                usernameError: _usernameError,
+                                checkingUsername: _checkingUsername,
+                                usernameController: _usernameController,
+                                emailController: _emailController,
+                                passwordController: _passwordController,
+                                usernameFocus: _usernameFocus,
+                                emailFocus: _emailFocus,
+                                passwordFocus: _passwordFocus,
+                                onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
+                                onSubmit: _handleSubmit,
+                                onToggleAuthMode: () => setState(() {
+                                  _isSignUp = !_isSignUp;
+                                  _usernameError = null;
+                                }),
+                              ),
+                      ],
                     ),
-                    const SizedBox(height: 20),
-                    AuthInputField(
-                      controller: _passwordController,
-                      focusNode: _passwordFocus,
-                      textInputAction: TextInputAction.done,
-                      keyboardType: TextInputType.visiblePassword,
-                      autofillHints: const [AutofillHints.password],
-                      label: 'Password',
-                      icon: Icons.lock_outline,
-                      obscureText: _obscurePassword,
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                      validator: (v) => v == null || v.length < 6 ? 'Too short' : null,
-                      onFieldSubmitted: (_) => _handleSubmit(),
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      height: 56,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleSubmit,
-                        child: _isLoading ? const CircularProgressIndicator() : Text(_isSignUp ? 'Create Account' : 'Sign In'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    TextButton(
-                      onPressed: () => setState(() => _isSignUp = !_isSignUp),
-                      child: Text(_isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Create one"),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
+          if (_isLoading)
+            const Positioned.fill(child: AnimatedOpacity(opacity: 0.3, duration: Duration(milliseconds: 200), child: ModalBarrier(dismissible: false, color: Colors.black))),
+        ],
       ),
     );
   }
