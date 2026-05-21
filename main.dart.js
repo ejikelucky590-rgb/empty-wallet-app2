@@ -8098,7 +8098,7 @@ s=q}for(;;)switch(s){case 0:if($.X==null)A.S_()
 $.X.toString
 q=3
 s=6
-return A.x(A.alt("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_MMsTIt81-QakeUPVxj-hlQ_kLOghDu5","NEXT_PUBLIC_SUPABASE_URL=https://bpxqlhfntpdqnlddrlpc.supabase.co").avn(0,B.h4),$async$ayR)
+return A.x(A.alt("EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHFsaGZudHBkcW5sZGRybHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTAwNDMsImV4cCI6MjA5MzY","https://bpxqlhfntpdqnlddrlpc.supabase.co").avn(0,B.h4),$async$ayR)
 case 6:q=1
 s=5
 break
