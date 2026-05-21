@@ -7,15 +7,10 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
-    # Force the build job to authenticate against the deployment environment
-    environment: github-pages
 
     steps:
       - name: Checkout Repository
