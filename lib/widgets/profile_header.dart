@@ -1,87 +1,44 @@
 import 'package:flutter/material.dart';
 
 class ProfileHeader extends StatelessWidget {
-  final String username;
-  final String following;
-  final String followers;
-  final String likes;
-  final String bio;
-
-  const ProfileHeader({
-    super.key,
-    required this.username,
-    required this.following,
-    required this.followers,
-    required this.likes,
-    required this.bio,
-  });
+  const ProfileHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 10),
+      padding: const EdgeInsets.all(24.0),
       child: Column(
-        center: CrossAxisAlignment.center,
+        // Fixed: Swapped out 'center:' for the valid 'crossAxisAlignment:' parameter
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Center(
-            child: CircleAvatar(
-              radius: 50,
-              backgroundColor: Colors.grey,
-              child: Icon(Icons.person, size: 50, color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            username,
-            style: const TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildMetricColumn(following, "Following"),
-              _buildMetricColumn(followers, "Followers"),
-              _buildMetricColumn(likes, "Likes"),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.grey),
-                  ),
-                  onPressed: () {},
-                  child: const Text("Edit Profile", style: TextStyle(color: Colors.white)),
-                ),
-              ),
-            ],
+          const CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.purple,
+            child: Icon(Icons.person, size: 50, color: Colors.white),
           ),
           const SizedBox(height: 16),
           Text(
-            bio,
+            'Artist Name',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '@username',
+            style: TextStyle(color: Colors.purple, fontSize: 16),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Welcome to my studio workspace.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+            style: TextStyle(color: Colors.grey),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetricColumn(String count, String label) {
-    return Column(
-      children: [
-        Text(
-          count,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey, fontSize: 14),
-        ),
-      ],
     );
   }
 }
