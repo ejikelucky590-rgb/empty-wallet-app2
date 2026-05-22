@@ -18,18 +18,11 @@ Future<void> bootstrap() async {
     ]);
   }
 
-  // Fetch credentials securely from the compilation environment flags
-  const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: '',
-  );
-  const String supabaseKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: '',
-  );
+  // HARDCODED TEST VALUES: Direct injection to bypass GitHub Secrets configuration entirely
+  const String supabaseUrl = "https://bpxqlhfntpdqnlddrlpc.supabase.co";
+  const String supabaseKey = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHFsaGZudHBkcW5sZGRybHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTAwNDMsImV4cCI6MjA5MzYyNjA0M30._292X6dNpZWD34dOW7CTUUXmPQNCGlQlht750jOf9q8";
 
   if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
-    // DIAGNOSTICS UPDATE: Show exactly which variable is failing to load
     bootstrapError = "Configuration Error: Missing Supabase environment compilation flags.\n\n"
                      "🔍 DIAGNOSTICS:\n"
                      "-> SUPABASE_URL detected: ${supabaseUrl.isNotEmpty ? 'YES (Length: ${supabaseUrl.length})' : 'NO (EMPTY)'}\n"
