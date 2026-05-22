@@ -18,9 +18,9 @@ Future<void> bootstrap() async {
     ]);
   }
 
-  // HARDCODED TEST VALUES: Direct injection to bypass GitHub Secrets configuration entirely
+  // CORRECTED CONFIGURATION: Set to lowercase 'e' for valid authentication token structure
   const String supabaseUrl = "https://bpxqlhfntpdqnlddrlpc.supabase.co";
-  const String supabaseKey = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHFsaGZudHBkcW5sZGRybHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTAwNDMsImV4cCI6MjA5MzYyNjA0M30._292X6dNpZWD34dOW7CTUUXmPQNCGlQlht750jOf9q8";
+  const String supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJweHFsaGZudHBkcW5sZGRybHBjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNTAwNDMsImV4cCI6MjA5MzYyNjA0M30._292X6dNpZWD34dOW7CTUUXmPQNCGlQlht750jOf9q8";
 
   if (supabaseUrl.isEmpty || supabaseKey.isEmpty) {
     bootstrapError = "Configuration Error: Missing Supabase environment compilation flags.\n\n"
