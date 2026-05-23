@@ -53,7 +53,7 @@ class AuthInputField extends StatefulWidget {
   State<AuthInputField> createState() => _AuthInputFieldState();
 }
 
-class _AuthKeyboardState extends State<AuthInputField> {
+class _AuthInputFieldState extends State<AuthInputField> {
   bool _isFocused = false;
 
   @override
