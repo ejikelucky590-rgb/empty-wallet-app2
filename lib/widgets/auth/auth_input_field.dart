@@ -17,6 +17,7 @@ class AuthInputField extends StatefulWidget {
   final bool obscureText;
   final bool enabled;
   final bool autofocus;
+  final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
@@ -40,6 +41,7 @@ class AuthInputField extends StatefulWidget {
     this.obscureText = false,
     this.enabled = true,
     this.autofocus = false,
+    this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
     this.suffixIcon,
     this.validator,
@@ -51,7 +53,7 @@ class AuthInputField extends StatefulWidget {
   State<AuthInputField> createState() => _AuthInputFieldState();
 }
 
-class _AuthInputFieldState extends State<AuthInputField> {
+class _AuthKeyboardState extends State<AuthInputField> {
   bool _isFocused = false;
 
   @override
@@ -61,7 +63,6 @@ class _AuthInputFieldState extends State<AuthInputField> {
     widget.focusNode.addListener(_handleFocusChange);
   }
 
-  // Extracted listener function so we can remove it cleanly later
   void _handleFocusChange() {
     if (mounted) {
       setState(() {
@@ -72,7 +73,6 @@ class _AuthInputFieldState extends State<AuthInputField> {
 
   @override
   void dispose() {
-    // Crucial Step: Removes the listener from the shared parent FocusNode to prevent memory leaks
     widget.focusNode.removeListener(_handleFocusChange);
     super.dispose();
   }
@@ -110,6 +110,7 @@ class _AuthInputFieldState extends State<AuthInputField> {
           keyboardType: widget.keyboardType,
           autofillHints: widget.autofillHints,
           obscureText: widget.obscureText,
+          textCapitalization: widget.textCapitalization,
           maxLines: widget.obscureText ? 1 : widget.maxLines,
           maxLength: widget.maxLength,
           inputFormatters: widget.inputFormatters,
@@ -170,10 +171,10 @@ class _AuthInputFieldState extends State<AuthInputField> {
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(18),
               borderSide: BorderSide(color: colors.error, width: 2),
+            ),
           ),
         ),
       ),
-    ),
-   );
+    );
   }
 }
