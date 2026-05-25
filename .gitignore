@@ -1,1 +1,20 @@
-.env
+# Hidden tool directories
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Compilation build outputs
+build/
+
+# Web platform build outputs
+.web_plugins/
+
+# IDE files and localized caches
+.history/
+.project
+.idea/
+*.iws
+*.iml
+.DS_Store
