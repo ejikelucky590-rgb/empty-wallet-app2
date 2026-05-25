@@ -1,0 +1,79 @@
+[
+  {
+    "code": "NG",
+    "name": "Nigeria",
+    "states": [
+      "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
+      "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", 
+      "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", 
+      "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", 
+      "Zamfara", "Abuja (FCT)"
+    ]
+  },
+  {
+    "code": "GH",
+    "name": "Ghana",
+    "states": [
+      "Greater Accra", "Ashanti", "Western", "Eastern", "Northern", "Volta", "Central", 
+      "Upper East", "Upper West", "Bono"
+    ]
+  },
+  {
+    "code": "ZA",
+    "name": "South Africa",
+    "states": [
+      "Gauteng", "Western Cape", "KwaZulu-Natal", "Eastern Cape", "Free State", "Limpopo", 
+      "Mpumalanga", "North West", "Northern Cape"
+    ]
+  },
+  {
+    "code": "US",
+    "name": "United States",
+    "states": [
+      "California", "Texas", "Florida", "New York", "Georgia", "Illinois", "Nevada", 
+      "Ohio", "Arizona", "Washington"
+    ]
+  },
+  {
+    "code": "GB",
+    "name": "United Kingdom",
+    "states": [
+      "England", "Scotland", "Wales", "Northern Ireland"
+    ]
+  },
+  {
+    "code": "CA",
+    "name": "Canada",
+    "states": [
+      "Ontario", "Quebec", "British Columbia", "Alberta", "Manitoba", "Nova Scotia"
+    ]
+  },
+  {
+    "code": "FR",
+    "name": "France",
+    "states": [
+      "Île-de-France", "Provence-Alpes-Côte d'Azur", "Occitanie", "Nouvelle-Aquitaine"
+    ]
+  },
+  {
+    "code": "DE",
+    "name": "Germany",
+    "states": [
+      "Bavaria", "Berlin", "Hamburg", "Hesse", "Saxony"
+    ]
+  },
+  {
+    "code": "BR",
+    "name": "Brazil",
+    "states": [
+      "São Paulo", "Rio de Janeiro", "Bahia", "Paraná", "Pernambuco"
+    ]
+  },
+  {
+    "code": "IN",
+    "name": "India",
+    "states": [
+      "Maharashtra", "Delhi", "Karnataka", "Tamil Nadu", "Gujarat", "Punjab", "Rajasthan"
+    ]
+  }
+]
