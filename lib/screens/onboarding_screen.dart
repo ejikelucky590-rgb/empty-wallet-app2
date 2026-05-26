@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../models/country_model.dart';
 import '../services/country_service.dart';
 import 'onboarding_controller.dart';
+import '../validators/username_validator.dart';
 import 'onboarding_widgets.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -74,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _usernameError = null;
       });
       
-      final result = await _controller.checkUsernameAvailability(value);
+      final result = await _controller.checkUsernameAvailability(UsernameValidator.normalize(value));
       
       if (mounted) {
         setState(() {
