@@ -51,6 +51,8 @@ dependencies:
   csc_picker: ^0.2.7
   image: ^4.8.0
   path: ^1.9.1
+  google_fonts: ^8.1.0
+  mime: ^2.0.0
 
 dev_dependencies:
   flutter_test:

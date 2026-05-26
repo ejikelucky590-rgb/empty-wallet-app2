@@ -31,7 +31,7 @@ class OnboardingLocationSection extends StatelessWidget {
         const SizedBox(height: 18),
         CSCPicker(
           layout: Layout.vertical,
-          flagState: CountryFlag.SHOW_FLAGS,
+          flagState: ,
           showCities: false,
           countryDropdownLabel: 'Select Country',
           stateDropdownLabel: 'Select State / Region',
@@ -51,9 +51,9 @@ class OnboardingLocationSection extends StatelessWidget {
             border: Border.all(color: theme.dividerColor),
           ),
           disabledDropdownDecoration: BoxDecoration(
-            color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+            color: colorScheme.surfaceContainerHighest.withValues(0.5),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+            border: Border.all(color: theme.dividerColor.withValues(0.5)),
           ),
         ),
         const SizedBox(height: 24),
