@@ -15,6 +15,7 @@ class UsernameValidator {
     if (cleanValue.length > 30) return 'Maximum 30 characters';
     
     final validCharacters = RegExp(r'^[a-zA-Z0-9._]+$');
+    if (validCharacters.hasMatch(cleanValue) == false) {
       return 'Only letters, numbers, underscores, or periods allowed';
     }
 
