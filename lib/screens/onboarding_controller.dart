@@ -36,8 +36,10 @@ class OnboardingController {
         'available': existing == null,
         'error': existing == null ? null : 'Username already taken'
       };
-    } catch (_) {
-      return {'available': false, 'error': 'Unable to check username'};
+    } catch (e, stack) {
+      debugPrint('🚨 Supabase Error Detail: ');
+      debugPrint('💼 Stacktrace: ');
+      return {'available': false, 'error': 'Unable to check username ()'};
     }
   }
 
