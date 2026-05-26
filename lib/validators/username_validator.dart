@@ -4,16 +4,24 @@ class UsernameValidator {
   ];
 
   static String normalize(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '');
+    return value.trim().toLowerCase();
   }
 
   static String? validate(String value) {
-    final username = normalize(value);
+    final cleanValue = value.trim();
 
-    if (username.isEmpty) return 'Username required';
-    if (username.length < 3) return 'Minimum 3 characters';
-    if (username.length > 30) return 'Maximum 30 characters';
-    if (reserved.contains(username)) return 'Reserved username';
+    if (cleanValue.isEmpty) return 'Username required';
+    if (cleanValue.length < 3) return 'Minimum 3 characters';
+    if (cleanValue.length > 30) return 'Maximum 30 characters';
+    
+    final validCharacters = RegExp(r'^[a-zA-Z0-9._]+$');
+    if (!validCharacters.hasMatch(cleanValue)) {
+      return 'Only letters, numbers, underscores, or periods allowed';
+    }
+
+    if (reserved.contains(cleanValue.toLowerCase())) {
+      return 'Reserved username';
+    }
 
     return null;
   }
