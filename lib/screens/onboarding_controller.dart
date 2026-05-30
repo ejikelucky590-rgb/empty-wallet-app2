@@ -14,7 +14,6 @@ class OnboardingController {
     usernameDebounce?.cancel();
   }
 
-  // Handles async username testing loops against the table index
   Future<Map<String, dynamic>> checkUsernameAvailability(String value) async {
     final username = value.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '');
 
@@ -36,14 +35,14 @@ class OnboardingController {
         'available': existing == null,
         'error': existing == null ? null : 'Username already taken'
       };
-    } catch (e, stack) {
-      debugPrint('🚨 Supabase Error Detail: ');
-      debugPrint('💼 Stacktrace: ');
-      return {'available': false, 'error': 'Unable to check username ()'};
+    } catch (e) {
+      return {
+        'available': false, 
+        'error': e.toString()
+      };
     }
   }
 
-  // Bundles profile payload records to backend profile rows
   Future<void> saveProfile({
     required String stageName,
     required String firstName,
@@ -57,9 +56,8 @@ class OnboardingController {
     if (user == null) throw Exception('No active session');
 
     final username = stageName.toLowerCase().replaceAll(RegExp(r'[^a-z0-9_]'), '');
-    final fullName = '$firstName $lastName'.trim();
+    final fullName = ' '.trim();
 
-    // Secondary runtime collision defense check
     final existing = await _supabase
         .from('profiles')
         .select('id')
