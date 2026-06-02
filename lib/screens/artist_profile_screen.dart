@@ -161,6 +161,30 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
                           '@dove_creator',
                           style: TextStyle(color: colors.outline, fontWeight: FontWeight.w500),
                         ),
+                        const SizedBox(height: 6),
+                        // Presence Row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Active now',
+                              style: TextStyle(
+                                color: colors.onSurfaceVariant,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 10),
                         ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 320),
