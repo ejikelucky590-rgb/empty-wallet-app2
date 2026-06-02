@@ -122,7 +122,7 @@ class _AuthScreenState extends State<AuthScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _usernameError = 'Debug Error: ${e.toString()}');
+      setState(() => _usernameError = 'Error: ${e is PostgrestException ? (e as PostgrestException).message : e.toString()}');
     } finally {
       if (mounted) setState(() => _checkingUsername = false);
     }
