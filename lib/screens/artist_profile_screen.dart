@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_model.dart';
 import '../widgets/profile/profile_header.dart';
@@ -6,11 +7,11 @@ import '../widgets/profile/profile_settings_sheet.dart';
 import '../widgets/profile/profile_edit_sheet.dart';
 
 class ArtistProfileScreen extends StatefulWidget {
-  final ProfileModel fallbackProfile;
+  final ProfileModel? fallbackProfile;
 
   const ArtistProfileScreen({
     super.key,
-    required this.fallbackProfile,
+    this.fallbackProfile,
   });
 
   @override
@@ -26,14 +27,23 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> {
     _controller.syncProfile();
   }
 
+  ProfileModel _getDefaultFallback() {
+    final user = Supabase.instance.client.auth.currentUser;
+    return ProfileModel(
+      id: user?.id ?? '',
+      username: user?.email?.split('@')[0] ?? 'user',
+      stageName: 'New Creator',
+      bio: 'Afrobeat artist • Creative storyteller',
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     return ListenableBuilder(
       listenable: _controller,
       builder: (context, child) {
-        final activeProfile = _controller.profile ?? widget.fallbackProfile;
+        // Use live profile, passed fallback, or generate a safe default inline
+        final activeProfile = _controller.profile ?? widget.fallbackProfile ?? _getDefaultFallback();
 
         return Scaffold(
           appBar: AppBar(
