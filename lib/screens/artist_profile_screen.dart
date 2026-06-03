@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../controllers/profile_controller.dart';
+import '../widgets/profile/profile_header.dart';
+import '../widgets/profile/profile_stats.dart';
+import '../widgets/profile/profile_action_buttons.dart';
 import '../widgets/profile/profile_tabs_sections.dart';
 import '../widgets/profile/profile_settings_sheet.dart';
+import '../widgets/profile/profile_edit_sheet.dart';
+import '../widgets/profile/profile_skeleton.dart';
 
 class ArtistProfileScreen extends StatefulWidget {
   const ArtistProfileScreen({super.key});
@@ -12,277 +17,134 @@ class ArtistProfileScreen extends StatefulWidget {
 
 class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  final _supabase = Supabase.instance.client;
-  Future<Map<String, dynamic>?>? _profileFuture;
-
-  final _stageNameController = TextEditingController();
-  final _bioController = TextEditingController();
+  final _controller = ProfileController.instance;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _profileFuture = _fetchUserProfile();
-  }
-
-  Future<Map<String, dynamic>?> _fetchUserProfile() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return null;
-
-    try {
-      final data = await _supabase
-          .from('profiles')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
-      
-      if (data != null) {
-        _stageNameController.text = data['stage_name'] ?? '';
-        _bioController.text = data['bio'] ?? '';
-      }
-      return data;
-    } catch (e) {
-      debugPrint('🚨 Error loading profile: $e');
-      return null;
-    }
-  }
-
-  Future<void> _updateProfile() async {
-    final user = _supabase.auth.currentUser;
-    if (user == null) return;
-
-    await _supabase.from('profiles').update({
-      'stage_name': _stageNameController.text.trim(),
-      'bio': _bioController.text.trim(),
-    }).eq('id', user.id);
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('✅ Profile updated successfully!')),
-      );
-      setState(() {
-        _profileFuture = _fetchUserProfile();
-      });
-      Navigator.pop(context);
-    }
+    _controller.syncProfileData();
   }
 
   void _showSettingsBottomSheet() {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) => ProfileSettingsSheet(
-        stageNameController: _stageNameController,
-        bioController: _bioController,
-        onSave: _updateProfile,
-      ),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => const ProfileSettingsSheet(),
     );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _stageNameController.dispose();
-    _bioController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    final currentUser = _supabase.auth.currentUser;
+    final colors = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: colors.surface,
-      body: FutureBuilder<Map<String, dynamic>?>(
-        future: _profileFuture,
-        builder: (context, snapshot) {
-          final profileData = snapshot.data;
-          
-          final String rawUsername = profileData?['username'] ?? currentUser?.email?.split('@')[0] ?? 'user';
-          final String displayUsername = '@$rawUsername';
-          final String stageName = profileData?['stage_name'] ?? 'New Creator';
-          final String bioText = profileData?['bio'] ?? 'Afrobeat artist • Creative storyteller';
-          final String? avatarUrl = profileData?['avatar_url'];
+    return ListenableBuilder(
+      listenable: _controller,
+      builder: (context, child) {
+        if (_controller.isLoading && _controller.currentProfile == null) {
+          return Scaffold(
+            backgroundColor: colors.surface,
+            body: const SafeArea(child: ProfileSkeleton()),
+          );
+        }
 
-          return NestedScrollView(
-            physics: const BouncingScrollPhysics(),
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverAppBar(
-                  pinned: true,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  backgroundColor: colors.surface,
-                  surfaceTintColor: Colors.transparent,
-                  expandedHeight: 440,
-                  title: innerBoxIsScrolled
-                      ? Text(
-                          displayUsername,
-                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
-                        )
-                      : null,
-                  actions: [
-                    IconButton(
-                      icon: Icon(Icons.settings_outlined, color: colors.onSurface),
-                      onPressed: _showSettingsBottomSheet,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+        final profile = _controller.currentProfile;
+
+        return Scaffold(
+          backgroundColor: colors.surface,
+          body: RefreshIndicator(
+            onRefresh: _controller.syncProfileData,
+            child: NestedScrollView(
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverAppBar(
+                    pinned: true,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    backgroundColor: colors.surface,
+                    surfaceTintColor: Colors.transparent,
+                    expandedHeight: 440,
+                    title: innerBoxIsScrolled && profile != null
+                        ? Text('@${profile.username}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)) 
+                        : null,
+                    actions: [
+                      if (_controller.pendingSyncCount > 0)
+                        IconButton(
+                          icon: const Icon(Icons.sync_problem_rounded, color: Colors.amber),
+                          onPressed: () async {
+                            await _controller.flushPendingSyncs();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Attempting background synchronization sync...')),
+                            );
+                          },
+                        ),
+                      IconButton(
+                        icon: Icon(Icons.settings_outlined, color: colors.onSurface),
+                        onPressed: _showSettingsBottomSheet,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: SafeArea(
                         child: Column(
                           children: [
-                            const SizedBox(height: 16),
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: colors.outlineVariant, width: 1),
-                              ),
-                              child: CircleAvatar(
-                                radius: 46,
-                                backgroundColor: colors.primaryContainer,
-                                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                                child: avatarUrl == null 
-                                    ? Icon(Icons.person, size: 46, color: colors.onPrimaryContainer)
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              stageName,
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              displayUsername,
-                              style: TextStyle(color: colors.outline, fontWeight: FontWeight.w500),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.green,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Active now',
-                                  style: TextStyle(
-                                    color: colors.onSurfaceVariant,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ConstrainedBox(
-                              constraints: const BoxConstraints(maxWidth: 320),
-                              child: Text(
-                                bioText,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: colors.onSurfaceVariant, height: 1.4),
-                              ),
-                            ),
+                            if (profile != null) ProfileHeader(profile: profile),
                             const SizedBox(height: 20),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: const [
-                                _ProfileStatItem(value: '0', label: 'Followers'),
-                                _ProfileStatItem(value: '0', label: 'Following'),
-                                _ProfileStatItem(value: '0', label: 'Posts'),
-                              ],
-                            ),
+                            if (profile != null) ProfileStats(profile: profile),
                             const SizedBox(height: 22),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: FilledButton(
-                                    onPressed: _showSettingsBottomSheet,
-                                    style: FilledButton.styleFrom(
-                                      elevation: 0,
-                                      minimumSize: const Size(double.infinity, 50),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                                    ),
-                                    child: const Text('Edit Profile Layout', style: TextStyle(fontWeight: FontWeight.w700)),
-                                  ),
-                                ),
-                              ],
+                            ProfileActionButtons(
+                              onEditPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => const ProfileEditSheet(),
+                                );
+                              },
                             ),
                           ],
                         ),
                       ),
                     ),
-                  ),
-                  bottom: PreferredSize(
-                    preferredSize: const Size.fromHeight(58),
-                    child: Container(
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        border: Border(
-                          top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.25)),
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(58),
+                      child: Container(
+                        decoration: BoxDecoration(border: Border(top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.25)))),
+                        child: TabBar(
+                          controller: _tabController,
+                          dividerColor: Colors.transparent,
+                          splashFactory: NoSplash.splashFactory,
+                          indicatorWeight: 2.5,
+                          labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+                          tabs: const [
+                            Tab(icon: Icon(Icons.dynamic_feed_rounded), text: 'Timeline'),
+                            Tab(icon: Icon(Icons.library_music_rounded), text: 'Music'),
+                          ],
                         ),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        dividerColor: Colors.transparent,
-                        splashFactory: NoSplash.splashFactory,
-                        overlayColor: WidgetStateProperty.all(Colors.transparent),
-                        indicatorWeight: 2.5,
-                        labelStyle: const TextStyle(fontWeight: FontWeight.w700),
-                        tabs: const [
-                          Tab(icon: Icon(Icons.dynamic_feed_rounded), text: 'Timeline'),
-                          Tab(icon: Icon(Icons.library_music_rounded), text: 'Music'),
-                        ],
                       ),
                     ),
                   ),
-                ),
-              ];
-            },
-            body: TabBarView(
-              controller: _tabController,
-              children: const [
-                SingleChildScrollView(physics: BouncingScrollPhysics(), child: ProfileTimelineSection()),
-                SingleChildScrollView(physics: BouncingScrollPhysics(), child: ProfileMusicSection()),
-              ],
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: const [
+                  SingleChildScrollView(physics: BouncingScrollPhysics(), child: ProfileTimelineSection()),
+                  SingleChildScrollView(physics: BouncingScrollPhysics(), child: ProfileMusicSection()),
+                ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _ProfileStatItem extends StatelessWidget {
-  final String value;
-  final String label;
-  const _ProfileStatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-        const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
-      ],
+          ),
+        );
+      },
     );
   }
 }
