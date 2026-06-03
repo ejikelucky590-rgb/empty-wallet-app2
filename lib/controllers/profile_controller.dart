@@ -214,9 +214,9 @@ class ProfileController {
       if (user == null) return null;
       final path = "avatars/${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg";
       await _client.storage.from('avatars').upload(path, file);
-      return _client.storageUrl + '/object/public/avatars/' + path;
+      return _client.storage.from('avatars').getPublicUrl(path);
     } catch (e) {
-      debugPrint('🚨 Upload error: $e');
+      debugPrint('🚨 Storage Upload Error: $e');
       return null;
     }
   }
