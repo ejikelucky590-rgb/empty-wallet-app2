@@ -18,10 +18,9 @@ class PersistentQueue {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_key);
       if (raw == null) return [];
-      final decoded = jsonDecode(raw);
-      return List<Map<String, dynamic>>.from(decoded);
+      return List<Map<String, dynamic>>.from(jsonDecode(raw));
     } catch (e) {
-      debugPrint('🚨 PersistentQueue Load Error: $e');
+      debugPrint('🚨 Cache read failure: $e');
       return [];
     }
   }
@@ -31,7 +30,7 @@ class PersistentQueue {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_key, jsonEncode(data));
     } catch (e) {
-      debugPrint('🚨 PersistentQueue Save Error: $e');
+      debugPrint('🚨 Cache write failure: $e');
     }
   }
 }
@@ -48,79 +47,126 @@ class Backoff {
   void reset() => attempt = 0;
 }
 
-class ProfileController extends ChangeNotifier {
-  static final ProfileController instance = ProfileController._internal();
-  ProfileController._internal();
+class ProfileState {
+  final ProfileModel? profile;
+  final bool loading;
+  final int pending;
+  final double completion;
+  final NetworkState network;
+
+  ProfileState({
+    required this.profile,
+    required this.loading,
+    required this.pending,
+    required this.completion,
+    required this.network,
+  });
+
+  ProfileState copyWith({
+    ProfileModel? profile,
+    bool? loading,
+    int? pending,
+    double? completion,
+    NetworkState? network,
+  }) {
+    return ProfileState(
+      profile: profile ?? this.profile,
+      loading: loading ?? this.loading,
+      pending: pending ?? this.pending,
+      completion: completion ?? this.completion,
+      network: network ?? this.network,
+    );
+  }
+}
+
+class ProfileController {
+  ProfileController._();
+  static final instance = ProfileController._();
 
   final _client = Supabase.instance.client;
   final PersistentQueue _storage = PersistentQueue();
   final Backoff _backoff = Backoff();
-  
-  ProfileModel? _profile;
-  ProfileModel? get profile => _profile;
 
-  NetworkState _network = NetworkState.online;
-  NetworkState get network => _network;
+  final _stream = StreamController<ProfileState>.broadcast();
+  Stream<ProfileState> get stream => _stream.stream;
 
-  bool _loading = false;
-  bool get loading => _loading;
+  ProfileState _state = ProfileState(
+    profile: null,
+    loading: false,
+    pending: 0,
+    completion: 0,
+    network: NetworkState.online,
+  );
 
   List<Map<String, dynamic>> _queue = [];
-  int get pending => _queue.length;
+  Timer? _timer;
+  bool _isSyncing = false;
 
-  bool _isSyncing = false; // Single Instance Thread-Storm Guard
-  Timer? _syncTimer;
+  ProfileState get state => _state;
 
-  /// Calculated Profile Strength Scoring Metric
-  double get completionScore {
-    if (_profile == null) return 0.0;
+  void _emit() {
+    _stream.add(_state.copyWith(pending: _queue.length));
+  }
+
+  double _calc(ProfileModel? p) {
+    if (p == null) return 0;
     int score = 0;
 
-    if (_profile!.stageName.trim().isNotEmpty && _profile!.stageName != 'New Creator') score++;
-    if (_profile!.bio.trim().isNotEmpty && _profile!.bio != 'Afrobeat artist • Creative storyteller') score++;
-    if (_profile!.avatarUrl != null && _profile!.avatarUrl!.trim().isNotEmpty) score++;
-    if (_profile!.username.trim().isNotEmpty) score++;
+    if (p.stageName.trim().isNotEmpty && p.stageName != 'New Creator') score++;
+    if (p.bio.trim().isNotEmpty && p.bio != 'Afrobeat artist • Producer • Creative storyteller') score++;
+    if (p.avatarUrl?.isNotEmpty == true) score++;
+    if (p.username.trim().isNotEmpty) score++;
 
     return score / 4;
   }
 
   Future<void> init() async {
     _queue = await _storage.load();
-    _startSyncEngine();
     await syncProfile();
+    _startSync();
   }
 
   Future<void> syncProfile() async {
     final user = _client.auth.currentUser;
     if (user == null) return;
 
-    _loading = true;
-    notifyListeners();
+    _state = _state.copyWith(loading: true);
+    _emit();
 
     try {
       final data = await _client.from('profiles').select().eq('id', user.id).maybeSingle();
       if (data != null) {
-        _profile = ProfileModel.fromMap(data, user.email?.split('@')[0] ?? "user");
+        _state = _state.copyWith(
+          profile: ProfileModel.fromMap(data, user.email?.split('@')[0] ?? "user"),
+        );
+        _state = _state.copyWith(completion: _calc(_state.profile));
       }
     } catch (e) {
-      debugPrint('⚠️ Fetch error or profile offline: $e');
+      debugPrint('⚠️ Network loading background delay: $e');
     } finally {
-      _loading = false;
-      notifyListeners();
+      _state = _state.copyWith(loading: false);
+      _emit();
     }
   }
 
-  void _optimisticUpdate(Map<String, dynamic> patch) {
-    if (_profile == null) return;
-    _profile = _profile!.copyWith(
-      stageName: patch["stage_name"] ?? _profile!.stageName,
-      bio: patch["bio"] ?? _profile!.bio,
-      avatarUrl: patch["avatar_url"] ?? _profile!.avatarUrl,
+  void _optimistic(Map<String, dynamic> patch) {
+    final p = _state.profile;
+    if (p == null) return;
+
+    final updated = p.copyWith(
+      stageName: patch["stage_name"] ?? p.stageName,
+      bio: patch["bio"] ?? p.bio,
+      avatarUrl: patch["avatar_url"] ?? p.avatarUrl,
     );
-    notifyListeners();
+
+    _state = _state.copyWith(
+      profile: updated,
+      completion: _calc(updated),
+    );
+    _emit();
   }
 
-  Future<void> saveProfile({
+  Future<void> save({
     required String stageName,
     required String bio,
     String? avatarUrl,
@@ -129,40 +175,53 @@ class ProfileController extends ChangeNotifier {
     if (user == null) return;
 
     final payload = {
-      "id": user.id,
       "stage_name": stageName,
       "bio": bio,
-      "avatar_url": avatarUrl,
+      "avatar_url": avatarUrl ?? _state.profile?.avatarUrl,
       "timestamp": DateTime.now().millisecondsSinceEpoch,
     };
 
-    // 1. Fire Optimistic UI change instantly
-    _optimisticUpdate(payload);
-
-    // 2. Commit payload to local disk database queue safely
+    _optimistic(payload);
     _queue.add(payload);
     await _storage.save(_queue);
+    _sync();
+  }
 
-    // 3. Request immediate execution sweep pass safely
-    _syncNow();
+  Future<bool> handleAvatarUpload(File file) async {
+    _state = _state.copyWith(loading: true);
+    _emit();
+
+    final publicUrl = await uploadImage(file);
+    if (publicUrl != null) {
+      if (_state.profile != null) {
+        await save(
+          stageName: _state.profile!.stageName,
+          bio: _state.profile!.bio,
+          avatarUrl: publicUrl,
+        );
+      }
+      return true;
+    }
+    
+    _state = _state.copyWith(loading: false);
+    _emit();
+    return false;
   }
 
   Future<String?> uploadImage(File file) async {
     try {
       final user = _client.auth.currentUser;
       if (user == null) return null;
-      
       final path = "avatars/${user.id}/${DateTime.now().millisecondsSinceEpoch}.jpg";
       await _client.storage.from('avatars').upload(path, file);
-      return _client.storage.from('avatars').getPublicUrl(path);
+      return _client.clientUrl + '/storage/v1/object/public/avatars/' + path;
     } catch (e) {
-      debugPrint('🚨 Storage Upload Error: $e');
+      debugPrint('🚨 Upload error: $e');
       return null;
     }
   }
 
-  /// Thread Safe Core Execution Sync Engine Pass
-  Future<void> _syncNow() async {
+  Future<void> _sync() async {
     if (_isSyncing || _queue.isEmpty) return;
     final user = _client.auth.currentUser;
     if (user == null) return;
@@ -178,47 +237,37 @@ class ProfileController extends ChangeNotifier {
         "updated_at": DateTime.now().toIso8601String(),
       }).eq('id', user.id);
 
-      // On successful database response, trim the persistent array layout
       _queue.removeAt(0);
       await _storage.save(_queue);
       _backoff.reset();
       
       _isSyncing = false;
-      notifyListeners();
+      _emit();
 
-      // Chain process remaining backlog targets sequentially down the pipeline
       if (_queue.isNotEmpty) {
-        _syncNow();
+        await _sync();
       }
     } catch (e) {
       _isSyncing = false;
-      debugPrint('⚠️ Sync delayed, retry backoff sequence triggered: $e');
-      
-      final delay = _backoff.nextDelay();
-      _syncTimer?.cancel();
-      _syncTimer = Timer(delay, _syncNow);
+      _timer?.cancel();
+      _timer = Timer(_backoff.nextDelay(), _sync);
     }
   }
 
-  void _startSyncEngine() {
-    Timer.periodic(const Duration(seconds: 15), (_) async {
-      if (_queue.isNotEmpty && !_isSyncing) {
-        await _syncNow();
-      }
+  void _startSync() {
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (_queue.isNotEmpty && !_isSyncing) _sync();
     });
   }
 
   void setNetwork(NetworkState state) {
-    _network = state;
-    if (_network == NetworkState.online) {
-      _syncNow();
-    }
-    notifyListeners();
+    _state = _state.copyWith(network: state);
+    if (state == NetworkState.online) _sync();
+    _emit();
   }
 
-  @override
   void dispose() {
-    _syncTimer?.cancel();
-    super.dispose();
+    _timer?.cancel();
+    _stream.close();
   }
 }

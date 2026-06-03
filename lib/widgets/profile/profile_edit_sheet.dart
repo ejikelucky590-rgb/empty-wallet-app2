@@ -18,7 +18,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
   @override
   void initState() {
     super.initState();
-    final current = _controller.profile;
+    final current = _controller.state.profile;
     _stageNameController = TextEditingController(text: current?.stageName ?? '');
     _bioController = TextEditingController(text: current?.bio ?? '');
   }
@@ -35,7 +35,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
 
     Navigator.pop(context);
 
-    await _controller.saveProfile(
+    await _controller.save(
       stageName: _stageNameController.text.trim(),
       bio: _bioController.text.trim(),
     );
