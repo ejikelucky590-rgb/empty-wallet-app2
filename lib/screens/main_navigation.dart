@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'hub/hub_screen.dart';
-import '../profile_screen.dart';
+import 'artist_profile_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -30,7 +30,7 @@ class _MainNavigationState extends State<MainNavigation>
       const Center(child: Text("🎵 Waive Music", style: TextStyle(fontSize: 20, color: Colors.white))),
       const Center(child: Text("➕ Upload Content", style: TextStyle(fontSize: 20, color: Colors.white))),
       const Center(child: Text("🏆 Top Rankings", style: TextStyle(fontSize: 20, color: Colors.white))),
-      const ProfileScreen(),
+      const ArtistProfileScreen(),
     ];
 
     _listenToAuthChanges();
