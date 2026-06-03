@@ -34,7 +34,6 @@ class ProfileTimelineSection extends StatelessWidget {
 
         final posts = snapshot.data ?? [];
         
-        // Dynamic Fallback if database table has no rows yet
         if (posts.isEmpty) {
           return FutureBuilder<Map<String, dynamic>?>(
             future: supabase.from('profiles').select('stage_name, avatar_url').eq('id', user.id).maybeSingle().catchError((_) => null),
@@ -45,6 +44,7 @@ class ProfileTimelineSection extends StatelessWidget {
               return Column(
                 children: [
                   ProfilePostCard(
+                    content: 'Cooking a fire new Afro-beats track in the studio today 🔥. Cannot wait for you all to hear this!',
                     time: 'Just now',
                     stageName: name,
                     avatarUrl: avatar,
@@ -113,7 +113,6 @@ class ProfileMusicSection extends StatelessWidget {
 
         final tracks = snapshot.data ?? [];
         
-        // Dynamic Fallback tracks if database table has no uploads yet
         if (tracks.isEmpty) {
           return Column(
             children: const [
@@ -313,7 +312,6 @@ class MusicTrackCard extends StatelessWidget {
   }
 }
 
-class ProfileReactionBar Bars details...
 class ProfileReactionBar extends StatelessWidget {
   const ProfileReactionBar({super.key});
 
