@@ -123,7 +123,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       );
 
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Refresh session metadata and route to home hub smoothly
+      context.goNamed('home');
     } catch (e) {
       _showSnackBar(e.toString().replaceAll('Exception:', ''), isError: true);
     } finally {
