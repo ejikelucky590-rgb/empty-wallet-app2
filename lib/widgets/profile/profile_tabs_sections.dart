@@ -1,31 +1,84 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileTimelineSection extends StatelessWidget {
   const ProfileTimelineSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final posts = [
-      {
-        'time': 'Just now',
-        'content': 'Cooking a fire new Afro-beats track in the studio today 🔥',
-      },
-      {
-        'time': 'Yesterday',
-        'content': 'Thank you for the love on my latest release ❤️',
-      },
-    ];
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: posts.length,
-      itemBuilder: (context, index) {
-        final post = posts[index];
-        return ProfilePostCard(
-          content: post['content'].toString(),
-          time: post['time'].toString(),
+    if (user == null) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Text('Please log in to view timeline.', style: TextStyle(color: Colors.grey)),
+      ));
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: supabase
+          .from('posts')
+          .select('*, profiles(stage_name, username, avatar_url)')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .then((value) => List<Map<String, dynamic>>.from(value))
+          .catchError((_) => <Map<String, dynamic>>[]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: CircularProgressIndicator(),
+          ));
+        }
+
+        final posts = snapshot.data ?? [];
+        
+        // Dynamic Fallback if database table has no rows yet
+        if (posts.isEmpty) {
+          return FutureBuilder<Map<String, dynamic>?>(
+            future: supabase.from('profiles').select('stage_name, avatar_url').eq('id', user.id).maybeSingle().catchError((_) => null),
+            builder: (context, profileSnap) {
+              final String name = profileSnap.data?['stage_name'] ?? 'New Creator';
+              final String? avatar = profileSnap.data?['avatar_url'];
+              
+              return Column(
+                children: [
+                  ProfilePostCard(
+                    time: 'Just now',
+                    stageName: name,
+                    avatarUrl: avatar,
+                  ),
+                  ProfilePostCard(
+                    content: 'Thank you for the massive support on my music journey. Big things coming soon! 🕊️🦅',
+                    time: 'Yesterday',
+                    stageName: name,
+                    avatarUrl: avatar,
+                  ),
+                ],
+              );
+            },
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            final profile = post['profiles'] as Map<String, dynamic>?;
+            final String stageName = profile?['stage_name'] ?? 'New Creator';
+            final String? avatarUrl = profile?['avatar_url'];
+
+            return ProfilePostCard(
+              content: post['content']?.toString() ?? '',
+              time: 'Just now',
+              stageName: stageName,
+              avatarUrl: avatarUrl,
+            );
+          },
         );
       },
     );
@@ -37,27 +90,51 @@ class ProfileMusicSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tracks = [
-      {
-        'title': 'Lagos Vibe',
-        'listeners': '4.8K',
-      },
-      {
-        'title': 'No Daylight',
-        'listeners': '12.1K',
-      },
-    ];
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: tracks.length,
-      itemBuilder: (context, index) {
-        final track = tracks[index];
-        return MusicTrackCard(
-          title: track['title'].toString(),
-          listeners: track['listeners'].toString(),
+    if (user == null) return const SizedBox.shrink();
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: supabase
+          .from('tracks')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .then((value) => List<Map<String, dynamic>>.from(value))
+          .catchError((_) => <Map<String, dynamic>>[]),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: CircularProgressIndicator(),
+          ));
+        }
+
+        final tracks = snapshot.data ?? [];
+        
+        // Dynamic Fallback tracks if database table has no uploads yet
+        if (tracks.isEmpty) {
+          return Column(
+            children: const [
+              MusicTrackCard(title: 'Lagos Vibe (Intro)', listeners: '0'),
+              MusicTrackCard(title: 'No Daylight', listeners: '0'),
+            ],
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          itemCount: tracks.length,
+          itemBuilder: (context, index) {
+            final track = tracks[index];
+            return MusicTrackCard(
+              title: track['title']?.toString() ?? 'Untitled Track',
+              listeners: track['plays_count']?.toString() ?? '0',
+            );
+          },
         );
       },
     );
@@ -67,11 +144,15 @@ class ProfileMusicSection extends StatelessWidget {
 class ProfilePostCard extends StatelessWidget {
   final String content;
   final String time;
+  final String stageName;
+  final String? avatarUrl;
 
   const ProfilePostCard({
     super.key,
     required this.content,
     required this.time,
+    required this.stageName,
+    this.avatarUrl,
   });
 
   @override
@@ -99,13 +180,11 @@ class ProfilePostCard extends StatelessWidget {
                   CircleAvatar(
                     radius: 20,
                     backgroundColor: colors.primaryContainer,
-                    child: Icon(
-                      Icons.person,
-                      size: 20,
-                      color: colors.onPrimaryContainer,
-                    ),
+                    backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+                    child: avatarUrl == null
+                        ? Icon(Icons.person, size: 20, color: colors.onPrimaryContainer)
+                        : null,
                   ),
-                  // Green Dot Indicator
                   Positioned(
                     bottom: 0,
                     right: 0,
@@ -129,9 +208,9 @@ class ProfilePostCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Dove Artist',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      stageName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       time,
@@ -217,7 +296,7 @@ class MusicTrackCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  ' listens',
+                  '$listeners listens',
                   style: TextStyle(color: colors.outline),
                 ),
               ],
@@ -234,6 +313,7 @@ class MusicTrackCard extends StatelessWidget {
   }
 }
 
+class ProfileReactionBar Bars details...
 class ProfileReactionBar extends StatelessWidget {
   const ProfileReactionBar({super.key});
 

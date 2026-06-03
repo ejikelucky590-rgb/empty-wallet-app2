@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:go_router/go_router.dart';
 import '../widgets/profile/profile_tabs_sections.dart';
+import '../widgets/profile/profile_settings_sheet.dart';
 
 class ArtistProfileScreen extends StatefulWidget {
   const ArtistProfileScreen({super.key});
@@ -14,6 +14,9 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
   late final TabController _tabController;
   final _supabase = Supabase.instance.client;
   Future<Map<String, dynamic>?>? _profileFuture;
+
+  final _stageNameController = TextEditingController();
+  final _bioController = TextEditingController();
 
   @override
   void initState() {
@@ -32,17 +35,59 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
           .select()
           .eq('id', user.id)
           .maybeSingle();
-          
+      
+      if (data != null) {
+        _stageNameController.text = data['stage_name'] ?? '';
+        _bioController.text = data['bio'] ?? '';
+      }
       return data;
     } catch (e) {
-      debugPrint('🚨 Error loading live profile dataset: $e');
+      debugPrint('🚨 Error loading profile: $e');
       return null;
     }
+  }
+
+  Future<void> _updateProfile() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    await _supabase.from('profiles').update({
+      'stage_name': _stageNameController.text.trim(),
+      'bio': _bioController.text.trim(),
+    }).eq('id', user.id);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Profile updated successfully!')),
+      );
+      setState(() {
+        _profileFuture = _fetchUserProfile();
+      });
+      Navigator.pop(context);
+    }
+  }
+
+  void _showSettingsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => ProfileSettingsSheet(
+        stageNameController: _stageNameController,
+        bioController: _bioController,
+        onSave: _updateProfile,
+      ),
+    );
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _stageNameController.dispose();
+    _bioController.dispose();
     super.dispose();
   }
 
@@ -59,10 +104,9 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
         builder: (context, snapshot) {
           final profileData = snapshot.data;
           
-          // Fallback parsing variables if fields are missing in table layout row
           final String rawUsername = profileData?['username'] ?? currentUser?.email?.split('@')[0] ?? 'user';
           final String displayUsername = '@$rawUsername';
-          final String stageName = profileData?['stage_name'] ?? profileData?['full_name'] ?? 'New Creator';
+          final String stageName = profileData?['stage_name'] ?? 'New Creator';
           final String bioText = profileData?['bio'] ?? 'Afrobeat artist • Creative storyteller';
           final String? avatarUrl = profileData?['avatar_url'];
 
@@ -84,51 +128,9 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
                         )
                       : null,
                   actions: [
-                    PopupMenuButton<String>(
+                    IconButton(
                       icon: Icon(Icons.settings_outlined, color: colors.onSurface),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      onSelected: (value) async {
-                        if (value == 'logout') {
-                          await _supabase.auth.signOut();
-                          if (mounted) context.goNamed('auth');
-                        } else {
-                          String message = '${value.replaceAll("_", " ")} coming soon.';
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'edit_profile',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 20, color: colors.onSurfaceVariant),
-                              const SizedBox(width: 12),
-                              const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'theme',
-                          child: Row(
-                            children: [
-                              Icon(Icons.palette_outlined, size: 20, color: colors.onSurfaceVariant),
-                              const SizedBox(width: 12),
-                              const Text('Appearance', style: TextStyle(fontWeight: FontWeight.w500)),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuDivider(),
-                        PopupMenuItem(
-                          value: 'logout',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.logout_rounded, size: 20, color: Colors.redAccent),
-                              const SizedBox(width: 12),
-                              const Text('Logout', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.redAccent)),
-                            ],
-                          ),
-                        ),
-                      ],
+                      onPressed: _showSettingsBottomSheet,
                     ),
                     const SizedBox(width: 8),
                   ],
@@ -212,13 +214,13 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen> with SingleTi
                               children: [
                                 Expanded(
                                   child: FilledButton(
-                                    onPressed: () {},
+                                    onPressed: _showSettingsBottomSheet,
                                     style: FilledButton.styleFrom(
                                       elevation: 0,
                                       minimumSize: const Size(double.infinity, 50),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                     ),
-                                    child: const Text('Edit Layout', style: TextStyle(fontWeight: FontWeight.w700)),
+                                    child: const Text('Edit Profile Layout', style: TextStyle(fontWeight: FontWeight.w700)),
                                   ),
                                 ),
                               ],
