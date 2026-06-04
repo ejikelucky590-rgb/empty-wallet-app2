@@ -81,4 +81,22 @@ class ProfileController {
   }
 
   // Note: Add your other sync/init/save methods here exactly as they were in your functional version
+
+  // Sync pending local changes to remote
+  Future<void> syncProfile() async {
+    // Implement your sync logic here
+    notifyListeners();
+  }
+
+  // Handle avatar upload
+  Future<bool> handleAvatarUpload(dynamic file) async {
+    // Implement your file upload logic here
+    return true;
+  }
+
+  // Save profile updates
+  Future<void> save({required Map<String, dynamic> data}) async {
+    // Implement your save logic here
+    notifyListeners();
+  }
 }
