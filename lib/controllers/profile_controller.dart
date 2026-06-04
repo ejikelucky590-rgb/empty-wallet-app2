@@ -51,7 +51,7 @@ class ProfileController extends ChangeNotifier {
   Stream<ProfileState> get stream => _stream.stream;
   ProfileState get state => _state;
 
-  Future<void> save({required String stageName, required String bio, required Map<String, dynamic> data}) async {
+  Future<void> save({required String stageName, required String bio, Map<String, dynamic>? data}) async {
     try {
       // Implement your Supabase update logic here
       notifyListeners();
