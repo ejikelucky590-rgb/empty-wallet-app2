@@ -18,11 +18,12 @@ class PersistentQueue {
       return List<Map<String, dynamic>>.from(jsonDecode(raw));
     } catch (e) { return []; }
   }
-  Future<void> save(List<Map<String, dynamic>> data) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_key, jsonEncode(data));
-    } catch (e) {}
+  
+  Future<void> save({required String stageName, required Map<String, dynamic> data}) async {
+    // Logic here
+    notifyListeners();
+  }
+ catch (e) {}
   }
 }
 
@@ -44,7 +45,7 @@ class ProfileState {
   }
 }
 
-class ProfileController {
+class ProfileController extends ChangeNotifier {
   ProfileController._();
   static final instance = ProfileController._();
   final _client = Supabase.instance.client;
@@ -95,8 +96,10 @@ class ProfileController {
   }
 
   // Save profile updates
-  Future<void> save({required Map<String, dynamic> data}) async {
-    // Implement your save logic here
+  
+  Future<void> save({required String stageName, required Map<String, dynamic> data}) async {
+    // Logic here
     notifyListeners();
   }
+
 }
