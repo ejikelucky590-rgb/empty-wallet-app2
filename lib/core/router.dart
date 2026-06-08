@@ -5,7 +5,7 @@ import '../screens/main_navigation.dart';
 import '../screens/auth_screen.dart';
 import '../screens/onboarding_screen.dart';
 
-final GoRouter router = GoRouter(
+final GoRouter appRouter = GoRouter(
   // Optimization: Instantly look up session to decide initial path
   initialLocation: Supabase.instance.client.auth.currentSession == null ? '/auth' : '/',
   
