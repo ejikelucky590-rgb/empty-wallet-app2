@@ -27,14 +27,10 @@ dependencies:
   cached_network_image: ^3.3.1
   flutter_animate: ^4.5.0
   shimmer: ^3.0.0
+  google_fonts: ^8.1.0
 
-<<<<<<< HEAD
-  # Audio
-  just_audio: ^0.10.5
-=======
   # Audio - Professional Global Standard
   just_audio: ^0.9.38
->>>>>>> ff426c7497aa93229ab653d386bd78c761559de6
   audio_session: ^0.1.18
   audio_service: ^0.18.14
   rxdart: ^0.27.7
@@ -45,6 +41,7 @@ dependencies:
   # Camera / Media
   camera: ^0.11.0
   image_picker: ^1.2.2
+  file_picker: ^10.3.2
 
   # GPS / Location
   geolocator: ^11.0.0
@@ -58,21 +55,26 @@ dependencies:
   csc_picker: ^0.2.7
   image: ^4.8.0
   path: ^1.9.1
-  google_fonts: ^8.1.0
   mime: ^2.0.0
-  file_picker: ^11.0.2
-  audio_service: ^0.18.18
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
+  shared_preferences: ^2.5.3
+  uuid: ^4.5.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
   flutter_lints: ^3.0.0
+
   build_runner: ^2.4.9
+
   freezed: ^2.5.2
+  freezed_annotation: ^2.4.1
+
   json_serializable: ^6.8.0
+  json_annotation: ^4.9.0
+
 flutter:
   uses-material-design: true
+
   assets:
     - lib/data/countries.json

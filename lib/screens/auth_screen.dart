@@ -95,16 +95,20 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _checkUsernameAvailability(String username) async {
+    if (username.isEmpty) return;
+
     setState(() {
       _checkingUsername = true;
       _usernameError = null;
     });
 
     try {
+      final normalizedUsername = username.trim().toLowerCase();
+
       final existingUser = await _supabase
           .from('profiles')
           .select('username')
-          .eq('username', username)
+          .eq('username', normalizedUsername)
           .maybeSingle();
 
       if (!mounted) return;
@@ -116,9 +120,9 @@ class _AuthScreenState extends State<AuthScreen> {
           _usernameError = null;
         }
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _usernameError = 'Unable to verify username');
+      setState(() => _usernameError = 'Error: ${e is PostgrestException ? (e as PostgrestException).message : e.toString()}');
     } finally {
       if (mounted) setState(() => _checkingUsername = false);
     }
