@@ -25,90 +25,53 @@ class _ContentCardState extends ConsumerState<ContentCard> {
 
   void _play() {
     final audio = ref.read(audioControllerProvider.notifier);
-
     ContentRepository.instance.incrementView(widget.content.id);
-
-    audio.playTrack(
-      widget.content,
-      queue: widget.feed,
-    );
+    audio.playTrack(widget.content, queue: widget.feed);
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(audioControllerProvider);
-
     final isPlaying = state.currentTrack?.id == widget.content.id;
 
     return VisibilityDetector(
       key: Key(widget.content.id),
-
       onVisibilityChanged: (info) {
-        final visiblePercent = info.visibleFraction;
-
-        // 🎯 TikTok rule: only auto-play when mostly visible
-        if (visiblePercent > 0.7 && !_hasPlayed) {
+        if (info.visibleFraction > 0.7 && !_hasPlayed) {
           _play();
           _hasPlayed = true;
         }
       },
-
       child: GestureDetector(
         onTap: _play,
-
         child: Card(
           margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           clipBehavior: Clip.antiAlias,
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
               Stack(
                 children: [
-
                   Image.network(
-                    widget.content.thumbnail_url ??
-                        'https://via.placeholder.com/300',
+                    widget.content.thumbnailUrl ?? 'https://via.placeholder.com/300',
                     height: 200,
                     width: double.infinity,
                     fit: BoxFit.cover,
                   ),
-
-                  // 🎧 PLAYING INDICATOR (Spotify feel)
                   if (isPlaying)
                     Positioned(
-                      top: 10,
-                      right: 10,
+                      top: 10, right: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text(
-                          "Playing",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                          ),
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(20)),
+                        child: const Text("Playing", style: TextStyle(color: Colors.white, fontSize: 10)),
                       ),
                     ),
                 ],
               ),
-
               Padding(
                 padding: const EdgeInsets.all(10),
-                child: Text(
-                  widget.content.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: Text(widget.content.title, style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
