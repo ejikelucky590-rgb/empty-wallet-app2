@@ -28,7 +28,7 @@ class AudioController extends Notifier<PlaybackStateModel> {
   }) async {
     final newQueue = queue ?? state.queue;
 
-    await _player.setUrl(track.content_url);
+    await _player.setUrl(track.contentUrl);
     await _player.play();
 
     state = state.copyWith(
@@ -94,3 +94,14 @@ class AudioController extends Notifier<PlaybackStateModel> {
     state = state.copyWith(position: position);
   }
 }
+
+final audioControllerProvider =
+    NotifierProvider<AudioController, PlaybackStateModel>(
+  AudioController.new,
+);
+
+
+final audioControllerProvider =
+    NotifierProvider<AudioController, PlaybackStateModel>(
+  AudioController.new,
+);

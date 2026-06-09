@@ -49,7 +49,7 @@ class _MainNavigationState extends State<MainNavigation> {
         index: _selectedIndex,
         children: _screens,
       ),
-      bottomNavigationBar: const MiniPlayerWrapper(),
+      bottomNavigationBar: MiniPlayerWrapper(),
     );
   }
 }
