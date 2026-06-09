@@ -4,10 +4,6 @@ import 'package:flutter/services.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/upload/upload_sheet.dart';
 
-import 'hub/hub_screen.dart';
-import 'waive_screen.dart';
-import 'artist_profile_screen.dart';
-
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
@@ -24,20 +20,18 @@ class _MainNavigationState extends State<MainNavigation> {
   void initState() {
     super.initState();
 
-    // 📌 Screens (Upload is NOT a screen anymore)
-    _screens = [
-      const HubScreen(),
-      const WaiveScreen(),
-      const SizedBox(), // Upload placeholder (handled via modal)
-      const Center(child: Text("🏆 Rankings")),
-      const ArtistProfileScreen(),
+    _screens = const [
+      Center(child: Text('Home')),
+      Center(child: Text('Waives')),
+      SizedBox(),
+      Center(child: Text('Rankings')),
+      Center(child: Text('Profile')),
     ];
   }
 
   void _onDestinationSelected(int index) {
     HapticFeedback.lightImpact();
 
-    // 🚀 Upload is a modal action (X / Instagram style)
     if (index == 2) {
       UploadSheet.show(context);
       return;
@@ -55,14 +49,7 @@ class _MainNavigationState extends State<MainNavigation> {
         index: _selectedIndex,
         children: _screens,
       ),
-
-      // 🎧 GLOBAL AUDIO DOCK + NAVIGATION
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          MiniPlayerWrapper(),
-        ],
-      ),
+      bottomNavigationBar: const MiniPlayerWrapper(),
     );
   }
 }
