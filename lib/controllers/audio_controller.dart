@@ -105,3 +105,8 @@ final audioControllerProvider =
     NotifierProvider<AudioController, PlaybackStateModel>(
   AudioController.new,
 );
+
+final audioControllerProvider =
+    NotifierProvider<AudioController, PlaybackStateModel>(
+  AudioController.new,
+);
