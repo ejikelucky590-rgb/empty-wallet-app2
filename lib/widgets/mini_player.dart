@@ -55,7 +55,7 @@ class MiniPlayer extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(8),
                 image: DecorationImage(
                   image: NetworkImage(
-                    track.thumbnailUrl ??
+                    track.thumbnail_url ??
                         'https://via.placeholder.com/150',
                   ),
                   fit: BoxFit.cover,

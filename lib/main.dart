@@ -86,7 +86,7 @@ class DoveApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Dove Music',
       theme: DoveTheme.darkTheme,
-      routerConfig: appRouter,
+      routerConfig: router,
     );
   }
 }
